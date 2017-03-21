@@ -42,14 +42,15 @@ typedef enum {
     tmSecond, tmMinute, tmHour, tmWday, tmDay,tmMonth, tmYear, tmNbrFields
 } tmByteFields;	   
 
-typedef struct  { 
+typedef struct  {
   uint8_t Second; 
   uint8_t Minute; 
   uint8_t Hour; 
-  uint8_t Wday;   // day of week, sunday is day 1
   uint8_t Day;
   uint8_t Month; 
   uint8_t Year;   // offset from 1970; 
+  uint8_t Wday;   // day of week, sunday is day 0
+  bool isdst;   // 1 Daylight Savings Time, 0 No DST
 } 	tmElements_t, TimeElements, *tmElementsPtr_t;
 
 //convenience macros to convert to and from tm years 
@@ -64,13 +65,13 @@ typedef time_t(*getExternalTime)();
 
 /*==============================================================================*/
 /* Useful Constants */
-#define SECS_PER_MIN  ((time_t)(60UL))
-#define SECS_PER_HOUR ((time_t)(3600UL))
-#define SECS_PER_DAY  ((time_t)(SECS_PER_HOUR * 24UL))
-#define DAYS_PER_WEEK ((time_t)(7UL))
-#define SECS_PER_WEEK ((time_t)(SECS_PER_DAY * DAYS_PER_WEEK))
-#define SECS_PER_YEAR ((time_t)(SECS_PER_WEEK * 52UL))
-#define SECS_YR_2000  ((time_t)(946684800UL)) // the time at the start of y2k
+#define SECS_PER_MIN  (60UL)
+#define SECS_PER_HOUR (3600UL)
+#define SECS_PER_DAY  (SECS_PER_HOUR * 24UL)
+#define DAYS_PER_WEEK (7UL)
+#define SECS_PER_WEEK (SECS_PER_DAY * DAYS_PER_WEEK)
+#define SECS_PER_YEAR (SECS_PER_WEEK * 52UL)
+#define SECS_YR_2000  (946684800UL) // the time at the start of y2k
  
 /* Useful Macros for getting elapsed time */
 #define numberOfSeconds(_time_) (_time_ % SECS_PER_MIN)  
@@ -116,11 +117,16 @@ int     month();           // the month now  (Jan is month 1)
 int     month(time_t t);   // the month for the given time
 int     year();            // the full four digit year: (2009, 2010 etc) 
 int     year(time_t t);    // the year for the given time
+bool	is_dst();           // is daylight savings time. 1 = DST, 0 = no DST
+bool	is_dst(time_t t);   // is daylight savings time for a given time. 1 = DST, 0 = no DST
+bool	isDST(tmElements_t &tm);
 
 time_t now();              // return the current time as seconds since Jan 1 1970 
 void    setTime(time_t t);
 void    setTime(int hr,int min,int sec,int day, int month, int yr);
 void    adjustTime(long adjustment);
+void    setTimeZone(int8_t timeZone); //Set the time zone offset in hours.  e.g. 0 = Greenwich, -5 = Eastern Standard Time
+void    setdstRule(int8_t dstRule); //follow daylight savings time rules. 0 = no, 1 = USA rules(2nd Sun in MAR to 1st Sun in NOV), 2 = Central Europe(last Sun in MAR to last Sun in OCT)
 
 /* date strings */ 
 #define dt_MAX_STRING_LEN 9 // length of longest date string (excluding terminating null)
@@ -135,7 +141,7 @@ void    setSyncProvider( getExternalTime getTimeFunction); // identify the exter
 void    setSyncInterval(time_t interval); // set the number of seconds between re-sync
 
 /* low level functions to convert to and from system time                     */
-void breakTime(time_t time, tmElements_t &tm);  // break time_t into elements
+void breakTime(time_t time, tmElements_t &tm, uint8_t dst);  // break time_t into elements, this function calls itself at the end if daylight savings time with the dst parameter 1
 time_t makeTime(tmElements_t &tm);  // convert time elements into time_t
 
 } // extern "C++"
